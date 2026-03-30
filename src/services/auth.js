@@ -1,6 +1,9 @@
 const GOOGLE_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
 
 let scriptPromise;
+let gisInitialized = false;
+let activeCredentialHandler = null;
+let activeErrorHandler = null;
 
 export function loadGoogleIdentityScript() {
   if (window.google?.accounts?.id) {
@@ -47,18 +50,27 @@ export function initializeGoogleSignIn({ clientId, onCredential, onError }) {
     throw new Error("Google Identity Services is not available.");
   }
 
+  activeCredentialHandler = onCredential;
+  activeErrorHandler = onError;
+
+  if (gisInitialized) {
+    return;
+  }
+
   window.google.accounts.id.initialize({
     client_id: clientId,
     callback: (response) => {
       if (!response?.credential) {
-        onError?.(new Error("Missing credential from Google Sign-In."));
+        activeErrorHandler?.(new Error("Missing credential from Google Sign-In."));
         return;
       }
-      onCredential(response.credential);
+      activeCredentialHandler?.(response.credential);
     },
     auto_select: false,
     cancel_on_tap_outside: true
   });
+
+  gisInitialized = true;
 }
 
 export function renderGoogleButton(target, theme = "filled_blue") {
