@@ -4,6 +4,12 @@ function ensureApiUrl() {
   if (!API_URL) {
     throw new Error("Missing VITE_APPS_SCRIPT_URL.");
   }
+
+  if (API_URL.includes("script.google.com/macros/s/")) {
+    throw new Error(
+      "Use script.googleusercontent.com web app URL (redirect-free), not script.google.com/macros/s/.../exec."
+    );
+  }
 }
 
 async function readJson(response) {
@@ -39,7 +45,8 @@ export async function postAction(body) {
   ensureApiUrl();
   const response = await fetch(API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    // text/plain keeps the request \"simple\" and avoids browser preflight/CORS issues.
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify(body)
   });
   return readJson(response);
