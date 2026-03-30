@@ -17,9 +17,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      VITE_APPS_SCRIPT_URL: ${{ secrets.VITE_APPS_SCRIPT_URL }}
-      VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,11 +25,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Validate required secrets
-        run: |
-          test -n "$VITE_APPS_SCRIPT_URL" || (echo "Missing secret: VITE_APPS_SCRIPT_URL" && exit 1)
-          test -n "$VITE_GOOGLE_CLIENT_ID" || (echo "Missing secret: VITE_GOOGLE_CLIENT_ID" && exit 1)
+          cache: npm
 
       - name: Install dependencies
         run: |
@@ -52,6 +45,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+          if-no-files-found: error
 
   deploy:
     needs: build
