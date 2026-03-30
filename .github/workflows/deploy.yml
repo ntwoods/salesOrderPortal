@@ -1,0 +1,68 @@
+name: Deploy Accounts Team App
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "source/accounts-team-app/**"
+      - ".github/workflows/deploy-accounts-team-app.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "accounts-team-app-pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: source/accounts-team-app
+    env:
+      VITE_APPS_SCRIPT_URL: ${{ secrets.VITE_APPS_SCRIPT_URL }}
+      VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: source/accounts-team-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate required secrets
+        run: |
+          test -n "$VITE_APPS_SCRIPT_URL" || (echo "Missing secret: VITE_APPS_SCRIPT_URL" && exit 1)
+          test -n "$VITE_GOOGLE_CLIENT_ID" || (echo "Missing secret: VITE_GOOGLE_CLIENT_ID" && exit 1)
+
+      - name: Build
+        run: npm run build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: source/accounts-team-app/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
