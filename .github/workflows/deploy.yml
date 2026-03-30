@@ -36,7 +36,16 @@ jobs:
           fi
 
       - name: Build
-        run: npm run build
+        shell: bash
+        run: |
+          if [ -f CNAME ]; then
+            BASE_PATH="/"
+          else
+            REPO_NAME="${GITHUB_REPOSITORY#*/}"
+            BASE_PATH="/${REPO_NAME}/"
+          fi
+          echo "Using Vite base path: ${BASE_PATH}"
+          npm run build -- --base "${BASE_PATH}"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
