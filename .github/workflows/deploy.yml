@@ -35,6 +35,36 @@ jobs:
             npm install
           fi
 
+      - name: Resolve Apps Script URL
+        shell: bash
+        run: |
+          RAW_URL="${{ secrets.VITE_APPS_SCRIPT_URL }}"
+          GOOGLE_CLIENT_ID="${{ secrets.VITE_GOOGLE_CLIENT_ID }}"
+
+          if [ -z "$RAW_URL" ]; then
+            echo "Missing secret: VITE_APPS_SCRIPT_URL"
+            exit 1
+          fi
+          if [ -z "$GOOGLE_CLIENT_ID" ]; then
+            echo "Missing secret: VITE_GOOGLE_CLIENT_ID"
+            exit 1
+          fi
+
+          if [[ "$RAW_URL" == *script.google.com/macros/s/*/exec* ]]; then
+            echo "Resolving redirect-free Apps Script URL from /exec ..."
+            RESOLVED_URL="$(curl -sSL -o /dev/null -w '%{url_effective}' "$RAW_URL")"
+            if [ -z "$RESOLVED_URL" ]; then
+              echo "Failed to resolve Apps Script URL."
+              exit 1
+            fi
+          else
+            RESOLVED_URL="$RAW_URL"
+          fi
+
+          echo "VITE_APPS_SCRIPT_URL=$RESOLVED_URL" >> "$GITHUB_ENV"
+          echo "VITE_GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" >> "$GITHUB_ENV"
+          echo "Resolved endpoint host: $(echo "$RESOLVED_URL" | awk -F/ '{print $3}')"
+
       - name: Build
         shell: bash
         run: |
