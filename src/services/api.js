@@ -14,25 +14,16 @@ async function readJson(response) {
   return payload;
 }
 
-function toAuthQuery(auth) {
-  return JSON.stringify({
-    email: auth.email,
-    idToken: auth.idToken
-  });
-}
-
 export async function fetchAccountsOrders(auth) {
-  ensureApiUrl();
-  const params = new URLSearchParams({
-    action: "FETCH_ACCOUNTS_ORDERS",
-    auth: toAuthQuery(auth)
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({
+      action: "FETCH_ACCOUNTS_ORDERS",
+      auth
+    })
   });
-
-  const response = await fetch(`${API_URL}?${params.toString()}`, {
-    method: "GET"
-  });
-  const payload = await readJson(response);
-  return payload.data || [];
+  return (await readJson(response)).data || [];
 }
 
 export async function postAction(body) {
