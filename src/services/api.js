@@ -4,12 +4,6 @@ function ensureApiUrl() {
   if (!API_URL) {
     throw new Error("Missing VITE_APPS_SCRIPT_URL.");
   }
-
-  if (API_URL.includes("script.google.com/macros/s/")) {
-    throw new Error(
-      "Use script.googleusercontent.com web app URL (redirect-free), not script.google.com/macros/s/.../exec."
-    );
-  }
 }
 
 async function readJson(response) {
