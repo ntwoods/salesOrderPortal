@@ -57,7 +57,7 @@ export default function LoginGate({ onLoginSuccess }) {
     <main className="login-wrap">
       <div className="login-card">
         <p className="eyebrow">Sales Order Workflow</p>
-        <h2>Accounts Team Login</h2>
+        <h1>Accounts Team Login</h1>
         <p>Sign in with your NTWoods Google account to continue.</p>
         <div ref={targetRef} />
         {error && <p className="error-text">{error}</p>}
