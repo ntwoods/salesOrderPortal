@@ -35,7 +35,7 @@ jobs:
             npm install
           fi
 
-      - name: Resolve Apps Script URL
+      - name: Validate Frontend Secrets
         shell: bash
         run: |
           RAW_URL="${{ secrets.VITE_APPS_SCRIPT_URL }}"
@@ -50,20 +50,16 @@ jobs:
             exit 1
           fi
 
-          if [[ "$RAW_URL" == *script.google.com/macros/s/*/exec* ]]; then
-            echo "Resolving redirect-free Apps Script URL from /exec ..."
-            RESOLVED_URL="$(curl -sSL -o /dev/null -w '%{url_effective}' "$RAW_URL")"
-            if [ -z "$RESOLVED_URL" ]; then
-              echo "Failed to resolve Apps Script URL."
-              exit 1
-            fi
-          else
-            RESOLVED_URL="$RAW_URL"
+          # For Apps Script web apps, frontend requests must target the original /exec URL.
+          # Direct script.googleusercontent.com echo URLs are redirect targets and break POST actions.
+          if [[ "$RAW_URL" == *script.googleusercontent.com/* ]]; then
+            echo "Invalid VITE_APPS_SCRIPT_URL: use the original script.google.com ... /exec URL, not script.googleusercontent.com."
+            exit 1
           fi
 
-          echo "VITE_APPS_SCRIPT_URL=$RESOLVED_URL" >> "$GITHUB_ENV"
+          echo "VITE_APPS_SCRIPT_URL=$RAW_URL" >> "$GITHUB_ENV"
           echo "VITE_GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" >> "$GITHUB_ENV"
-          echo "Resolved endpoint host: $(echo "$RESOLVED_URL" | awk -F/ '{print $3}')"
+          echo "Configured endpoint host: $(echo "$RAW_URL" | awk -F/ '{print $3}')"
 
       - name: Build
         shell: bash
