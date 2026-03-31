@@ -25,7 +25,8 @@ body,
   min-height: 100%;
   background: radial-gradient(circle at 0 0, #dce9f1 0, #f3f6f8 52%, #edf3f5 100%);
   color: var(--text);
-  font-family: "IBM Plex Sans", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", Ubuntu, Cantarell, Helvetica, Arial,
+    sans-serif;
 }
 
 a {
@@ -56,9 +57,10 @@ a {
 }
 
 .top-header h1,
-.login-card h2 {
+.login-card h1 {
   margin: 0;
-  font-family: "Manrope", sans-serif;
+  font-family: inherit;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
@@ -142,8 +144,8 @@ a {
 
 .order-head h3 {
   margin: 0;
-  font-family: "Manrope", sans-serif;
   font-size: 18px;
+  font-weight: 700;
 }
 
 .meta-grid {
@@ -176,8 +178,8 @@ a {
 
 .segment-header h4 {
   margin: 0;
-  font-family: "Manrope", sans-serif;
   font-size: 15px;
+  font-weight: 700;
 }
 
 .status-pill {
@@ -276,7 +278,7 @@ a {
 
 .empty-state h3 {
   margin: 0 0 8px;
-  font-family: "Manrope", sans-serif;
+  font-weight: 700;
 }
 
 .loader-wrap {
