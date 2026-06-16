@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AppShell from "./components/AppShell";
 import ConfirmDialog from "./components/ConfirmDialog";
 import Header from "./components/Header";
@@ -10,36 +10,84 @@ import { disableGoogleAutoSelect } from "./services/auth";
 import { fetchAccountsOrders, uploadAdditional, uploadFinal } from "./services/api";
 import { buildUploadPayload } from "./utils/file";
 
+const AUTO_REFRESH_INTERVAL_MS = 40000;
+const TOAST_DURATION_MS = 3500;
+
 let toastIdCounter = 0;
 
 export default function App() {
   const [auth, setAuth] = useState(null);
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [busyMap, setBusyMap] = useState({});
   const [toasts, setToasts] = useState([]);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const refreshInFlightRef = useRef(false);
+  const toastTimeoutsRef = useRef(new Map());
+
+  const dismissToast = useCallback((id) => {
+    const timeoutId = toastTimeoutsRef.current.get(id);
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+      toastTimeoutsRef.current.delete(id);
+    }
+
+    setToasts((prev) => prev.filter((item) => item.id !== id));
+  }, []);
 
   const pushToast = useCallback((message, type = "success") => {
     const id = ++toastIdCounter;
     setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((item) => item.id !== id));
-    }, 3500);
+    const timeoutId = window.setTimeout(() => {
+      dismissToast(id);
+    }, TOAST_DURATION_MS);
+    toastTimeoutsRef.current.set(id, timeoutId);
+  }, [dismissToast]);
+
+  useEffect(() => {
+    return () => {
+      for (const timeoutId of toastTimeoutsRef.current.values()) {
+        window.clearTimeout(timeoutId);
+      }
+      toastTimeoutsRef.current.clear();
+    };
   }, []);
 
-  const refreshOrders = useCallback(async () => {
-    if (!auth) return;
-    setLoading(true);
+  const refreshOrders = useCallback(async ({ authOverride = auth, showLoader = false } = {}) => {
+    if (!authOverride || refreshInFlightRef.current) return false;
+    refreshInFlightRef.current = true;
+    if (showLoader) {
+      setInitialLoading(true);
+    } else {
+      setRefreshing(true);
+    }
     try {
-      const data = await fetchAccountsOrders(auth);
+      const data = await fetchAccountsOrders(authOverride);
       setOrders(data);
+      return true;
     } catch (error) {
       pushToast(error.message || "Failed to fetch orders.", "error");
+      return false;
     } finally {
-      setLoading(false);
+      refreshInFlightRef.current = false;
+      if (showLoader) {
+        setInitialLoading(false);
+      } else {
+        setRefreshing(false);
+      }
     }
   }, [auth, pushToast]);
+
+  useEffect(() => {
+    if (!auth) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      void refreshOrders();
+    }, AUTO_REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [auth, refreshOrders]);
 
   const withBusy = useCallback(async (key, action) => {
     setBusyMap((prev) => ({ ...prev, [key]: true }));
@@ -91,18 +139,12 @@ export default function App() {
   const handleLogin = useCallback(
     async (loginAuth) => {
       setAuth(loginAuth);
-      setLoading(true);
-      try {
-        const data = await fetchAccountsOrders(loginAuth);
-        setOrders(data);
-      } catch (error) {
+      const ok = await refreshOrders({ authOverride: loginAuth, showLoader: true });
+      if (!ok) {
         setAuth(null);
-        pushToast(error.message || "Login allowed, but data fetch failed.", "error");
-      } finally {
-        setLoading(false);
       }
     },
-    [pushToast]
+    [refreshOrders]
   );
 
   const handleLogout = useCallback(() => {
@@ -110,35 +152,35 @@ export default function App() {
     setAuth(null);
     setOrders([]);
     setBusyMap({});
+    setInitialLoading(false);
+    setRefreshing(false);
+    refreshInFlightRef.current = false;
     setLogoutOpen(false);
   }, []);
-
-  const renderedBody = useMemo(() => {
-    if (loading) return <Loader label="Loading orders..." />;
-    return (
-      <DashboardPage
-        orders={orders}
-        busyMap={busyMap}
-        onUploadFinal={handleUploadFinal}
-        onUploadAdditional={handleUploadAdditional}
-      />
-    );
-  }, [busyMap, handleUploadAdditional, handleUploadFinal, loading, orders]);
 
   if (!auth) {
     return (
       <>
         <LoginGate onLoginSuccess={handleLogin} />
-        <ToastHost toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
+        <ToastHost toasts={toasts} onDismiss={dismissToast} />
       </>
     );
   }
 
   return (
     <AppShell>
-      <Header user={auth} onRefresh={refreshOrders} refreshing={loading} onLogout={() => setLogoutOpen(true)} />
-      {renderedBody}
-      <ToastHost toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
+      <Header user={auth} onRefresh={() => void refreshOrders()} refreshing={refreshing} onLogout={() => setLogoutOpen(true)} />
+      {initialLoading ? (
+        <Loader label="Loading orders..." />
+      ) : (
+        <DashboardPage
+          orders={orders}
+          busyMap={busyMap}
+          onUploadFinal={handleUploadFinal}
+          onUploadAdditional={handleUploadAdditional}
+        />
+      )}
+      <ToastHost toasts={toasts} onDismiss={dismissToast} />
       <ConfirmDialog
         open={logoutOpen}
         title="Sign out?"
