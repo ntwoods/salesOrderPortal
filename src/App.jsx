@@ -10,7 +10,7 @@ import { disableGoogleAutoSelect } from "./services/auth";
 import { fetchAccountsOrders, uploadAdditional, uploadFinal } from "./services/api";
 import { buildUploadPayload } from "./utils/file";
 
-const AUTO_REFRESH_INTERVAL_MS = 40000;
+const AUTO_REFRESH_INTERVAL_MS = 5000;
 const TOAST_DURATION_MS = 3500;
 
 let toastIdCounter = 0;
