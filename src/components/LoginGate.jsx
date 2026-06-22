@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  decodeJwt,
+  buildGoogleSession,
   initializeGoogleSignIn,
   loadGoogleIdentityScript,
   renderGoogleButton
@@ -27,16 +27,7 @@ export default function LoginGate({ onLoginSuccess }) {
         initializeGoogleSignIn({
           clientId: CLIENT_ID,
           onCredential: (credential) => {
-            const payload = decodeJwt(credential);
-            if (!payload?.email) {
-              setError("Could not extract email from Google credential.");
-              return;
-            }
-            onLoginSuccess({
-              email: payload.email.toLowerCase(),
-              idToken: credential,
-              name: payload.name || payload.email
-            });
+            onLoginSuccess(buildGoogleSession(credential));
           },
           onError: (err) => setError(err.message || "Google sign-in failed.")
         });
